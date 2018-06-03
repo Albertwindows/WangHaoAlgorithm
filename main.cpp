@@ -1,318 +1,266 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <stack>
+#include <algorithm>
 using namespace std;
-static int EXIT = 0;
-static int START = 0;
-const int lenSpace = 10;
-string Space(lenSpace, ' ');
-vector<string> symbol;
-vector<int> node;
-struct State {
-	//imp is implication
-	string lstr;
-	string rstr;
-	int index_rule;//0(公理),1,2,3,4
-				   //int rely;	
-};
-vector<State> res;
-static int ig = 0;
-struct Tree
-{
+typedef vector<string> String;
+struct STATE {
+	String left;
+	String right;
+	STATE* father;
+	STATE* lchild;
+	STATE* rchild;
 	int index;
-	int father;
-	int lchild;
-	int rchild;
+	int rule;
 };
-vector<Tree> G;
-bool isLetter(char c) {
-	if ((c <= 'z' && c >= 'a') || (c <= 'Z' && c >= 'A') || (c >= '0' && c <= '9')) {
-		return true;
-	}return false;
-}
-bool isAxiom(string & l, string & r) {
-	//l 是=>左面的蕴含式, r是右边的蕴含式
-	if ((l.find("!") != -1 || l.find("->") != -1 ||
-		r.find("!") != -1 || r.find("->") != -1))
-		return false;
-	for (size_t i = 0; i < symbol.size(); i++) {
-		string t = symbol.at(i);
-		if (l.find(t) != -1 && r.find(t) != -1) return true;
+typedef STATE CNode;
+class Solve
+{
+public:
+	void print() {
+		print(&this->head);
 	}
-	return false;
-}
-bool isExist(const string & a) {
-	for (size_t i = 0; i < symbol.size(); i++) {
-		if (symbol.at(i) == a) {
+	Solve(string init) {
+		switSym(init);
+		CNode t;
+		t.father = t.lchild = t.rchild = NULL;
+		t.rule = 0; //t.index = ++size;
+		t.right.push_back(init);
+		this->head = t;
+		buffSize = t.right.size() + 40;
+		CreatBiTree(&this->head);
+	}
+private:
+	CNode head;
+	int buffSize = 0;
+	int size = 0;//当前需要扩展的节点的索引值
+				 //vector<STATE> res;
+				 //vector<int> node2Index;
+	static bool cmp(string& a, string& b) {
+		return a.size() < b.size();
+	}
+	static bool isLetter(char c) {
+		if ((c <= 'z' && c >= 'a') || (c <= 'Z' && c >= 'A') || (c >= '0' && c <= '9')) {
 			return true;
+		}return false;
+	}
+	bool isAxiom(CNode* nn) {
+		//判断当前的节点(String类型)是不是公理
+		CNode* st = nn;
+		String& l = st->left;
+		String& r = st->right;
+		String::reverse_iterator itR = needDeal(&r);
+		String::reverse_iterator itL = needDeal(&l);
+		if (itR == r.rend() && itL == l.rend())
+			return true;
+		return false;
+	}
+	void switSym(string & in) {
+		//switch & and |
+		size_t pos1 = 0;
+		size_t pos2 = 0;
+		size_t pos3 = 0;
+		while (pos1 != -1 || pos2 != -1 || pos3 != -1) {
+			pos1 = in.find("&");
+			if (pos1 != -1)
+				in = in.substr(0, pos1 - 1) + "!(" + in.at(pos1 - 1) + "->!" + in.substr(pos1 + 1);
+			pos2 = in.find("|");
+			if (pos2 != -1)
+				in = in.substr(0, pos2 - 1) + "!" + in.at(pos2 - 1) + "->" + in.substr(pos2 + 1);
+			pos3 = in.find("<->");
+			if (pos3 != -1)
+				// "(a<->b)->(a->b)"; (!((a->b)->!(b->a)))->(a->b)
+				in = in.substr(0, pos3 - 1) + "!((" + in.at(pos3 - 1) + "->" +
+				in.at(pos3 + 3) + ")->!(" + in.at(pos3 + 3) + "->" + in.at(pos3 - 1) + "))"
+				+ in.substr(pos3 + 4);
 		}
 	}
-	return false;
-}
-void dealRight(string & lstr, string & rstr) {
-	string ss;
-	while (true) {
-		int p = rstr.find(",");
-		if (p == -1) ss = rstr;
-		else
-			ss = rstr.substr(0, p);
-
-		int pos = -1;
-		//getType(rstr, pos);
-		if (pos == -1) return;
-		//处理右边有非的形式,利用规则2
-		if (pos == 0) {
-			//将处理之前的结果放到res中
-			State s = { lstr,rstr,2 };
-			res.push_back(s);
-			Tree t = { ig++ };
-			//ss = ss.substr(1);
-			if (lstr.size() > 0)
-				lstr = lstr + "," + ss;
+	void DealNode(CNode *T, CNode *lchild, CNode * rchild) {
+		CNode* cur = T;
+		String lstr = cur->left;
+		String rstr = cur->right;
+		sort(rstr.begin(), rstr.end(), cmp);
+		String::reverse_iterator itR = needDeal(&rstr);
+		if (itR != rstr.rend()) {
+			string sonR = rstr.back();
+			rstr.pop_back();
+			int be = getType(sonR);//首先需要处理的情况
+								   //iv
+			if (sonR[be] == '-') {
+				string s1 = sonR.substr(0, be);
+				string s2 = sonR.substr(be + 2, sonR.size());
+				if (s1[0] != '!') s1 = "!" + s1;
+				else s1 = s1.substr(1);
+				if (s2[0] == '(') {
+					s2 = s2.substr(1, s2.size() - 2);
+				}
+				rstr.push_back(s2);
+				rstr.push_back(s1);
+				T->rule = 4;
+			}//ii
 			else
-				lstr = ss;
-		}
-
-	}
-
-
-}
-void getType1(string str, int& pos) {
-	if (str.find("!") == -1 && str.find("->") == -1) return;
-	string ss;	int flag = 1;
-	int p = str.find(",");
-
-
-	if (p == -1) ss = str;
-	else
-		ss = str.substr(0, p);
-	if (str[0] == '!') {
-		ss = str.substr(1); flag = 0;
-	}
-
-	if (isLetter(ss[0])) {
-		pos = 1;
-	}
-
-	vector<char> stor;
-	for (int i = 0; i < ss.size(); i++) {
-		if (ss[i] == '(') stor.push_back(ss[i]);
-		if (ss[i] == ')') stor.pop_back();
-		if (stor.empty()) {
-			if ((i == ss.size() - 1) && flag == 0) pos = 0;
-			else if ((i != ss.size() - 1) && flag == 0) pos = i + 2;
-			else pos = i + 1;
-			break;
-		}
-	}
-}
-void getType(string str, int& pos) {
-	if (str.find("!") == -1 && str.find("->") == -1) return;
-	vector<int> p0;
-	p0.push_back(-1);
-	while (true) {
-		int p = p0.back();
-		p = str.find(",", p + 1);
-		if (p == -1) break;
-		p0.push_back(p);
-	}
-	p0.push_back(str.size());
-	for (int j = 0; j < p0.size() - 1; j++) {
-		string ss;
-		ss = str.substr(p0.at(j) + 1, p0.at(j + 1) - p0.at(j) - 1);
-		getType1(ss, pos);
-		if (pos != -1) {
-			pos += p0.at(j) + 1;
+			{
+				string s = sonR.substr(1, sonR.size());
+				if (s[0] == '(') s = s.substr(1, s.size() - 2);
+				lstr.push_back(s);
+				T->rule = 2;
+			}
+			lchild = new CNode();
+			//lchild->index = ++size;
+			T->lchild = lchild;
+			lchild->father = T;
+			lchild->lchild = lchild->rchild = NULL;
+			lchild->left = lstr;
+			lchild->right = rstr;
 			return;
 		}
-	}
-}
-void printRes() {
+		sort(lstr.begin(), lstr.end(), cmp);
+		String::reverse_iterator itL = needDeal(&lstr);
 
-}
-void prove(int index) {
-	//第一次碰到分开的节点才能开始START=1;
-	if (EXIT == 1 && START == 1) {
-		printRes();
-		exit(0);
-	}
-	State cur = res.at(index);
-	if (isAxiom(cur.lstr, cur.rstr)) {
+		if (itL != lstr.rend()) {
+			string sonL = lstr.back();
+			lstr.pop_back();
+			int be = getType(sonL);//首先需要处理的情况
+			if (sonL[be] == '-') {//iii
+				string s1 = sonL.substr(0, be);
+				string s2 = sonL.substr(be + 2, sonL.size());
+				s1 = "!" + s1;
+				if (s2[0] == '(') {
+					s2 = s2.substr(1, s2.size() - 2);
+				}
+				String lstr1 = lstr, lstr2 = lstr;
+				lstr1.push_back(s1);
+				lstr2.push_back(s2);
+				lchild = new CNode();
+				lchild->father = T;
+				lchild->lchild = lchild->rchild = NULL;
+				lchild->right = rstr;
+				lchild->left = lstr1;
+				lchild->index = ++size;
 
-	}
+				rchild = new CNode();
+				rchild->father = T;
+				rchild->lchild = lchild->rchild = NULL;
+				rchild->right = rstr;
+				rchild->left = lstr2;
+				//rchild->index = ++size;
 
-	int p1 = -1, p2 = -1;
-	getType(cur.lstr, p1);
-	getType(cur.rstr, p2);
-	if (p2 >= 0) {//处理ii && iv两种情况
-				  /*DEBUG*/
-		if (p2 == cur.rstr.size()) {
-			cur.rstr = cur.rstr.substr(1, cur.rstr.size() - 2);
-			p2 = -1;
-			getType(cur.rstr, p2);
-		}
-		int pos = cur.rstr.find(",");
-		if (cur.rstr[p2] == '!') {
-
-			string nextR = cur.rstr.substr(pos + 1);
-			string nextL = cur.lstr;
-			if (nextL.size() != 0) nextL += ",";
-			if (cur.rstr[1] == '(')
-				nextL += cur.rstr.substr(2, pos - 3);
-			else
-				nextL += cur.rstr[1];
-			res.push_back({ nextL,nextR,2 });
-
-			Tree t = { ig,G.back().index,-1,-1 };
-			G.back().lchild = ig;
-			G.push_back(t);
-			ig++;
-
-			prove(ig);
-		}
-		else {
-			//iv情况
-			//
-			if (pos == -1) pos = cur.rstr.size();
-			string s1 = "!" + cur.rstr.substr(0, p2);
-			string s2;
-			if (cur.rstr[p2 + 2] == '(') {
-				s2 = cur.rstr.substr(p2 + 3, pos - p2 - 4);
+				T->lchild = lchild;
+				T->rchild = rchild;
+				T->rule = 3;
 			}
-			else s2 = cur.rstr.substr(p2 + 2, pos - p2 - 2);
-
-			string nextR = s1 + "," + s2;
-			string nextL = cur.lstr;
-			res.push_back({ nextL,nextR,4 });
-
-			Tree t = { ig,G.back().index,-1,-1 };
-			G.back().lchild = ig;
-			G.push_back(t);
-			ig++;
-
-			prove(ig);
+			else {
+				string s = sonL.substr(1, sonL.size());
+				if (s[0] == '(') s = s.substr(1, s.size() - 2);
+				rstr.push_back(s);
+				lchild = new CNode();
+				T->lchild = lchild;
+				T->rule = 1;
+				T->rchild = NULL;
+				//lchild->index = ++size;
+				lchild->father = T;
+				lchild->lchild = lchild->rchild = NULL;
+				lchild->left = lstr;
+				lchild->right = rstr;
+			}
 		}
+
 	}
-	else if (p1 >= 0) {
-		int pos = cur.lstr.find(",");
-		if (cur.lstr[p1] == '!') {
-
-			string ss = cur.lstr.substr(p1 + 1, pos);
-			string nextL = cur.lstr.substr(pos + 1);
-			string nextR;
-			if (cur.lstr.size() == 0) nextR = ss;
-			else nextR = cur.lstr + "," + ss;
-			//res.push_back({ nextL,nextR,2 });
-
-			Tree t = { ig,G.back().index,-1,-1 };
-			G.back().lchild = ig;
-			G.push_back(t);
-			ig++;
-
-			prove(ig);
+	void CreatBiTree(CNode * T = NULL) {
+		if (T == NULL) return;
+		if (isAxiom(T)) {
+			T->lchild = T->rchild = NULL;
+			return;
 		}
+		CNode* lchild = NULL; CNode* rchild = NULL;
+		DealNode(T, lchild, rchild);
+		CreatBiTree(T->lchild);
+		CreatBiTree(T->rchild);
 	}
-	else {
-		return;
+	String::reverse_iterator needDeal(String* current) {
+		//如果 返回值等于 current->end() 说明不需要处理了. 说明是公理了
+		String::reverse_iterator nn = current->rbegin();
+		for (; nn != current->rend(); ++nn) {
+			if (nn->size() == 1)
+				continue;
+			if ((*nn).find("!") != -1 || (*nn).find("->") != -1)
+				break;
+		}
+		return nn;
 	}
-}
-void getRes(string & l, string & r, int father) {
-	if (father < (int)res.size()) return;
-	if (isAxiom(l, r)) {
-		State t = { string(l + "=>" + r),0 };
-		res.push_back(t);
-		return;
+	int getType(string str) {
+		//传入的str:没有"," 
+		if (str[0] == '!' && str[1] == '(') return 0;
+		if (str[0] == '!' && isLetter(str[1])) return 2;
+		int pos = -1;
+		int bra = 0;
+		int i = 0;
+		do {
+			if (str[i] == '(') bra++;
+			if (str[i] == ')') bra--;
+			i++;
+		} while (bra != 0 && i < str.size());
+		if (i < str.size() - 1) pos = i;
+		return pos;
 	}
-	dealRight(l, r);
-	//dealLeft(l, r);
-	while (true) {
-		if (r.find("!") == -1 && r.find("->") == -1) break;
-		//pos = r.find(",");
-		dealRight(l, r);
+
+	void print(CNode* nn) {
+		if (nn == NULL) {
+			return;
+		}
+
+		print(nn->lchild);
+		print(nn->rchild);
+		static int no = 0;
+		int linsize = 0;
+		printf("(%2d) ", ++no);
+		nn->index = no;
+		for (String::iterator i = (*nn).left.begin(); i != (*nn).left.end(); ++i) {
+			cout << (*i);
+			linsize += i->size();
+			if (i != (*nn).left.end() - 1) {
+				cout << ","; linsize++;
+			}
+
+		}
+		cout << "=>";
+		for (String::iterator j = (*nn).right.begin(); j != (*nn).right.end(); ++j) {
+			cout << (*j);
+			linsize += j->size();
+			if (j != (*nn).right.end() - 1) {
+				cout << ","; linsize++;
+			}
+
+		}
+		int lenSpace = buffSize - linsize;
+		string Space(lenSpace, ' ');
+		cout << Space;
+		if (nn->rchild == NULL && nn->lchild == NULL) {
+			printf("公理\n");
+			return;
+		}
+		int r1 = nn->lchild->index;
+		printf("由[ %d ]", r1);
+		if (nn->rchild != NULL) {
+			int r2 = nn->rchild->index;
+			printf("[ %d ]", r2);
+		}
+		printf("得出,依据规则%d", nn->rule);
+		cout << endl;
 	}
-	while (true) {
-		int pos = l.find("->");
-		if (pos == -1) break;
-		//dealLeft(l, r);
-	}
-}
-//未完成(非必需)
-//先不考虑'&'和'|'两边是()的形式.所以main()中不需要调用这个函数.
-//void getPos(int & l, int & r, string & str, char flag,int pos) {
-//	//取值方式: left: [ , ) right( , ]
-//	if (str.at(pos - 1) != ')') {
-//		l = pos - 1;
-//	}
-//	if (str.at(pos + 1) != '(') {
-//		r = pos + 1;
-//		if (l != -1)
-//			return;
-//	}
-//	vector<char> bracket;
-//	bracket.push_back(')');
-//	int i = pos - 2;
-//	while (!bracket.empty() && i>=0) {
-//		char t = str.at(i);
-//		if (t == ')' || t == '(') {
-//			if (bracket.back() != t) {
-//				bracket.pop_back();
-//			}
-//			else {
-//				bracket.push_back(t);
-//			}
-//		}
-//		i--;
-//	}
-//	
-//}
+};
+
 int main()
 {
 	string str1 = "a->(b->a)";
 	string str2 = "(a->b)->(!b->!a)";
-	string str3 = "(a->b)->((a->c)->(a->(b&c)))";
+	string str3 = "(a->b)->((a->c)->(a->(b&c))))";
 	string str4 = "(a->c)->((b->c)->((a|b)->c))";
 	string str5 = "(a<->b)->(a->b)";
 	string str6 = "(p->(q->r))->((p->q)->(p->r))";
-	string in = str6;
-	//res.push(string(""));//把0号覆盖
-	for (size_t i = 0; i < in.size();)
-	{
-		if (isLetter(in[i])) {
-			string sym = "";
-			while (isLetter(in[i])) {
-				sym += in[i++];
-			}
-			if (!isExist(sym))
-				symbol.push_back(sym);
-		}
-		else {
-			i++;
-		}
-	}
-	size_t pos1 = 0;
-	size_t pos2 = 0;
-	size_t pos3 = 0;
-	//处理有多个&或者|的形式
-	while (pos1 != -1 || pos2 != -1 || pos3 != -1) {
-		pos1 = in.find("&");
-		if (pos1 != -1)
-			in = in.substr(0, pos1 - 1) + "!(" + in.at(pos1 - 1) + "->!" + in.substr(pos1 + 1);
-		pos2 = in.find("|");
-		if (pos2 != -1)
-			in = in.substr(0, pos2 - 1) + "!" + in.at(pos2 - 1) + "->" + in.substr(pos2 + 1);
-		pos3 = in.find("<->");
-		if (pos3 != -1)
-			// "(a<->b)->(a->b)"; (!((a->b)->!(b->a)))->(a->b)
-			in = in.substr(0, pos3 - 1) + "!((" + in.at(pos3 - 1) + "->" +
-			in.at(pos3 + 3) + ")->!(" + in.at(pos3 + 3) + "->" + in.at(pos3 - 1) + "))"
-			+ in.substr(pos3 + 4);
-	}
-	cout << in << endl;
-	//初始化
-	res.push_back({ "",in,-1 }); G.push_back({ ig,-1,-1,-1 });
-	//getRes(res.back().lstr,res.back().rstr,0);
-	prove(0);
+	string test = str3;
+	Solve s(test);
+	s.print();
 	system("pause");
 	return 0;
 }
