@@ -1,3 +1,7 @@
+/*
+author:albert wang(wangzhuo)
+Email:keepwz@163.com or keep@dlmu.edu.cn
+*/
 #include <iostream>
 #include <string>
 #include <vector>
@@ -33,7 +37,7 @@ public:
 private:
 	CNode head;
 	int buffSize = 0;
-	int size = 0;//µ±Ç°ĞèÒªÀ©Õ¹µÄ½ÚµãµÄË÷ÒıÖµ
+	int size = 0;//å½“å‰éœ€è¦æ‰©å±•çš„èŠ‚ç‚¹çš„ç´¢å¼•å€¼
 				 //vector<STATE> res;
 				 //vector<int> node2Index;
 	static bool cmp(string& a, string& b) {
@@ -45,7 +49,7 @@ private:
 		}return false;
 	}
 	bool isAxiom(CNode* nn) {
-		//ÅĞ¶Ïµ±Ç°µÄ½Úµã(StringÀàĞÍ)ÊÇ²»ÊÇ¹«Àí
+		//åˆ¤æ–­å½“å‰çš„èŠ‚ç‚¹(Stringç±»å‹)æ˜¯ä¸æ˜¯å…¬ç†
 		CNode* st = nn;
 		String& l = st->left;
 		String& r = st->right;
@@ -84,7 +88,7 @@ private:
 		if (itR != rstr.rend()) {
 			string sonR = rstr.back();
 			rstr.pop_back();
-			int be = getType(sonR);//Ê×ÏÈĞèÒª´¦ÀíµÄÇé¿ö
+			int be = getType(sonR);//é¦–å…ˆéœ€è¦å¤„ç†çš„æƒ…å†µ
 								   //iv
 			if (sonR[be] == '-') {
 				string s1 = sonR.substr(0, be);
@@ -120,7 +124,7 @@ private:
 		if (itL != lstr.rend()) {
 			string sonL = lstr.back();
 			lstr.pop_back();
-			int be = getType(sonL);//Ê×ÏÈĞèÒª´¦ÀíµÄÇé¿ö
+			int be = getType(sonL);//é¦–å…ˆéœ€è¦å¤„ç†çš„æƒ…å†µ
 			if (sonL[be] == '-') {//iii
 				string s1 = sonL.substr(0, be);
 				string s2 = sonL.substr(be + 2, sonL.size());
@@ -178,7 +182,7 @@ private:
 		CreatBiTree(T->rchild);
 	}
 	String::reverse_iterator needDeal(String* current) {
-		//Èç¹û ·µ»ØÖµµÈÓÚ current->end() ËµÃ÷²»ĞèÒª´¦ÀíÁË. ËµÃ÷ÊÇ¹«ÀíÁË
+		//å¦‚æœ è¿”å›å€¼ç­‰äº current->end() è¯´æ˜ä¸éœ€è¦å¤„ç†äº†. è¯´æ˜æ˜¯å…¬ç†äº†
 		String::reverse_iterator nn = current->rbegin();
 		for (; nn != current->rend(); ++nn) {
 			if (nn->size() == 1)
@@ -189,7 +193,7 @@ private:
 		return nn;
 	}
 	int getType(string str) {
-		//´«ÈëµÄstr:Ã»ÓĞ"," 
+		//ä¼ å…¥çš„str:æ²¡æœ‰"," 
 		if (str[0] == '!' && str[1] == '(') return 0;
 		if (str[0] == '!' && isLetter(str[1])) return 2;
 		int pos = -1;
@@ -236,16 +240,16 @@ private:
 		string Space(lenSpace, ' ');
 		cout << Space;
 		if (nn->rchild == NULL && nn->lchild == NULL) {
-			printf("¹«Àí\n");
+			printf("å…¬ç†\n");
 			return;
 		}
 		int r1 = nn->lchild->index;
-		printf("ÓÉ[ %d ]", r1);
+		printf("ç”±[ %d ]", r1);
 		if (nn->rchild != NULL) {
 			int r2 = nn->rchild->index;
 			printf("[ %d ]", r2);
 		}
-		printf("µÃ³ö,ÒÀ¾İ¹æÔò%d", nn->rule);
+		printf("å¾—å‡º,ä¾æ®è§„åˆ™%d", nn->rule);
 		cout << endl;
 	}
 };
